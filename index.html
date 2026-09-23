@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CipherQuest: Progressive Shift Edition</title>
+    <!-- Tailwind CSS & FontAwesome -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Pustaka Letupan Konfeti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+        
+        body { 
+            font-family: 'Plus Jakarta Sans', Arial, sans-serif; 
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 50%, #7dd3fc 100%);
+            overflow-x: hidden;
+        }
+        
+        .cyber-title { font-family: 'Outfit', sans-serif; }
+        .question-text { font-family: 'Outfit', sans-serif; letter-spacing: 0.02em; }
+        
+        .cartoon-card { 
+            background: rgba(255, 255, 255, 0.95); 
+            border: 4px solid #0284c7;
+            box-shadow: 0 10px 0px #0369a1, 0 20px 25px rgba(0,0,0,0.1);
+        }
+        
+        .cartoon-note { 
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); 
+            border: 3px dashed #16a34a; 
+        }
+        
+        .cartoon-float { animation: floatAnim 3s ease-in-out infinite; }
+        @keyframes floatAnim {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(3deg); }
+        }
+
+        .cyber-pulse { animation: pulseAnim 2s infinite; }
+        @keyframes pulseAnim {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 5px #0284c7); }
+            50% { transform: scale(1.05); filter: drop-shadow(0 0 20px #0284c7); }
+        }
+
+        .bg-particles {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 0; overflow: hidden;
+        }
+        
+        .particle {
+            position: absolute; background: rgba(2, 132, 199, 0.25);
+            border-radius: 50%; animation: floatUp 10s infinite linear;
+        }
+        @keyframes floatUp {
+            0% { transform: translateY(105vh) scale(0.5); opacity: 0; }
+            50% { opacity: 0.7; }
+            100% { transform: translateY(-10vh) scale(1.3); opacity: 0; }
+        }
+    </style>
+</head>
+<body class="text-slate-800 min-h-screen flex flex-col justify-between p-4 relative">
+
+    <!-- ELEMEN AUDIO DENGAN PENYEDIA GANTI (FALLBACK) -->
+    <audio id="bg-music" loop preload="auto">
+        <source src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3" type="audio/mpeg">
+        <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- BAR KAWALAN ATAS -->
+    <div class="fixed top-4 right-4 z-50 flex items-center gap-2 bg-white/95 p-2 rounded-full border-2 border-sky-600 shadow-lg">
+        <button onclick="goHome()" title="Halaman Utama" class="bg-sky-600 hover:bg-sky-500 text-white font-extrabold px-3 py-1.5 rounded-full text-xs flex items-center gap-1.5 transition transition-transform hover:scale-105 border border-sky-700 shadow-sm">
+            <i class="fa-solid fa-house"></i>
+            <span class="hidden md:inline">HOME</span>
+        </button>
+
+        <div class="h-5 w-[2px] bg-slate-300 mx-0.5"></div>
+
+        <span class="text-xs font-bold text-sky-700 px-1 hidden lg:inline">🎵 MUZIK:</span>
+        <button onclick="controlAudio('play')" title="Main Musik" class="w-8 h-8 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center text-xs transition transition-transform hover:scale-110">
+            <i class="fa-solid fa-play"></i>
+        </button>
+        <button onclick="controlAudio('pause')" title="Jeda Musik" class="w-8 h-8 rounded-full bg-amber-500 hover:bg-amber-400 text-slate-950 flex items-center justify-center text-xs transition transition-transform hover:scale-110">
+            <i class="fa-solid fa-pause"></i>
+        </button>
+        <button onclick="controlAudio('mute')" id="btn-mute" title="MUTE" class="w-8 h-8 rounded-full bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center text-xs transition transition-transform hover:scale-110">
+            <i class="fa-solid fa-volume-xmark"></i>
+        </button>
+    </div>
+
+    <div class="bg-particles">
+        <div class="particle" style="width:12px; height:12px; left:15%; animation-delay:1s; animation-duration:12s; background: #0284c7;"></div>
+        <div class="particle" style="width:20px; height:20px; left:40%; animation-delay:4s; animation-duration:15s; background: #db2777;"></div>
+        <div class="particle" style="width:10px; height:10px; left:65%; animation-delay:0s; animation-duration:9s; background: #ea580c;"></div>
+    </div>
+
+    <!-- HEADER -->
+    <header class="text-center py-3 border-b-4 border-sky-500/30 max-w-4xl mx-auto w-full z-10 relative bg-white/70 rounded-xl px-4 mt-2 shadow-sm">
+        <h1 class="cyber-title text-2xl md:text-4xl font-extrabold text-sky-700 tracking-wider drop-shadow-[0_2px_0_#bae6fd]">
+            <i class="fa-solid fa-user-ninja mr-2 text-amber-500 cartoon-float"></i>CIPHERQUEST-AI
+        </h1>
+        <p id="game-set-indicator" class="text-xs text-sky-800 uppercase tracking-widest font-extrabold mt-1">🎮 Misi Pemburu Teks Sulit Maya</p>
+    </header>
+
+    <!-- MAIN CONTENT BOX -->
+    <main class="flex-grow flex items-center justify-center max-w-4xl mx-auto w-full my-4 z-10 relative px-2">
+        
+        <!-- INTRO SCREEN -->
+        <div id="screen-intro" class="w-full cartoon-card p-6 rounded-2xl text-center screen-fade space-y-4">
+            <div class="text-7xl cartoon-float drop-shadow-lg">🤖🛡️🔑</div>
+            <h2 class="text-2xl md:text-3xl font-extrabold text-sky-900 cyber-title">Adakah Anda Ejen Rahsia Data?</h2>
+            <p class="text-slate-700 text-sm md:text-base max-w-xl mx-auto leading-relaxed font-semibold">
+                Selamat datang! Terokai Caesar Cipher dengan anjakan berperingkat (n = 1 hingga 5). Pilih set misi anda di bawah.
+            </p>
+
+            <div class="flex flex-col sm:flex-row gap-3 justify-center pt-4">
+                <button onclick="promptForAgentName(1)" class="bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold px-6 py-4 rounded-xl text-lg transition-all transform hover:scale-105 border-b-4 border-amber-700 shadow-lg flex items-center justify-center gap-2">
+                    <span>MULAKAN SET 1</span> 🚀
+                </button>
+                <button onclick="promptForAgentName(2)" class="bg-sky-600 hover:bg-sky-500 text-white font-extrabold px-6 py-4 rounded-xl text-lg transition-all transform hover:scale-105 border-b-4 border-sky-800 shadow-lg flex items-center justify-center gap-2">
+                    <span>MULAKAN SET 2</span> 🛸
+                </button>
+            </div>
+        </div>
+
+        <!-- GAMEPLAY SCREEN -->
+        <div id="screen-gameplay" class="w-full cartoon-card p-5 rounded-2xl hidden screen-fade">
+            <div class="flex justify-between items-center mb-3">
+                <div class="flex items-center gap-2">
+                    <span id="mission-badge" class="bg-sky-600 text-white px-3 py-1 rounded-full text-xs font-extrabold border-2 border-white shadow">MISI 1</span>
+                    <span id="question-progress" class="text-sky-900 text-xs font-bold font-mono bg-sky-100 px-2 py-0.5 rounded-md border border-sky-200">SOALAN 1 / 5</span>
+                </div>
+                <div id="lives-container" class="flex items-center gap-1 bg-sky-50 px-3 py-1 rounded-full border-2 border-sky-200 text-sm">
+                    <span class="text-[10px] text-slate-600 mr-1 font-bold">NYAWA:</span>
+                    <i id="heart-1" class="fa-solid fa-heart text-rose-500 text-base transition-all duration-300"></i>
+                    <i id="heart-2" class="fa-solid fa-heart text-rose-500 text-base transition-all duration-300"></i>
+                </div>
+            </div>
+
+            <h3 id="question-instruction" class="text-base md:text-lg font-extrabold text-sky-900 mb-2 bg-sky-50 p-2.5 rounded-xl border border-sky-200 flex items-center gap-2 question-text">
+                🕵️‍♂️ Arahan Operasi
+            </h3>
+            
+            <div class="cartoon-note p-3 rounded-xl text-xs mb-3 shadow-inner">
+                <div class="flex items-center text-emerald-800 font-extrabold mb-2 gap-1">
+                    <span class="text-lg">🤖</span> <span id="tips-title">KAPSUL TIP KESELAMATAN CIPHERBOT:</span>
+                </div>
+                <div id="tips-explanation" class="grid grid-cols-1 md:grid-cols-2 gap-2 text-slate-800 font-semibold mb-2"></div>
+
+                <div id="alphabet-table-container">
+                    <div class="text-[10px] font-bold text-emerald-800 mb-1 flex items-center gap-1">
+                        <span>🧮 JADUAL RUJUKAN ANJAKAN SEBENTAR:</span>
+                    </div>
+                    <div class="overflow-x-auto whitespace-nowrap scrollbar-thin bg-white rounded-xl border-2 border-emerald-200 p-2">
+                        <table class="min-w-full text-center text-sm border-collapse">
+                            <tbody id="dynamic-alphabet-table"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-slate-800 mb-3 bg-slate-50 p-4 rounded-xl border-2 border-slate-200 text-base md:text-lg flex justify-between items-center shadow-sm">
+                <div class="w-full question-text">
+                    <div id="q-main-text" class="font-extrabold text-slate-900 leading-snug whitespace-normal break-words">Teks: ...</div>
+                    <div id="q-sub-text" class="text-sky-800 font-bold mt-1.5 text-sm md:text-base">Nilai Anjakan (n): ...</div>
+                </div>
+            </div>
+
+            <!-- Objective Container -->
+            <div id="objective-container" class="grid grid-cols-1 gap-2 text-sm md:text-base hidden"></div>
+
+            <!-- Subjective Container -->
+            <div id="subjective-container" class="bg-slate-50 p-4 rounded-xl border-2 border-slate-200 text-sm hidden space-y-3">
+                <label class="block text-sky-900 font-extrabold uppercase tracking-wider text-xs">✍️ Sila Taip Jawapan Anda Di Bawah:</label>
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <input type="text" id="subjective-input" class="flex-grow bg-white border-2 border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-extrabold tracking-widest text-center focus:outline-none focus:border-sky-500 uppercase text-lg" placeholder="TAIP SINI">
+                    <button onclick="submitSubjectiveAnswer()" class="bg-sky-600 hover:bg-sky-500 text-white font-extrabold px-6 py-2 rounded-xl transition border-b-4 border-sky-800 whitespace-nowrap">HANTAR 📡</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MISSION SUCCESS SCREEN -->
+        <div id="screen-mission-success" class="w-full cartoon-card p-6 rounded-2xl text-center hidden screen-fade space-y-4 border-amber-400">
+            <div class="text-6xl cartoon-float">🎉🏆🤩</div>
+            <h2 id="ms-title" class="text-2xl md:text-3xl font-extrabold text-amber-600 cyber-title">MISI BERJAYA!</h2>
+            <p id="ms-desc" class="text-slate-800 font-semibold text-sm max-w-md mx-auto">Syabas!</p>
+            <button id="ms-btn" onclick="goToNextMission()" class="bg-emerald-500 hover:bg-emerald-400 text-white font-extrabold px-8 py-3 rounded-xl text-base transition transform hover:scale-105 border-b-4 border-emerald-700 shadow-md">
+                TERUSKAN SEKARANG ➡️
+            </button>
+        </div>
+
+        <!-- VICTORY FINAL SCREEN -->
+        <div id="screen-victory" class="w-full cartoon-card p-6 rounded-2xl text-center hidden screen-fade space-y-4 border-emerald-500">
+            <div class="text-7xl cyber-pulse">👑🦉👾</div>
+            <h2 id="victory-title" class="text-2xl md:text-3xl font-extrabold text-emerald-600 cyber-title">UJIAN SELESAI! 🎉</h2>
+            <p id="victory-desc" class="text-slate-800 font-semibold text-sm max-w-md mx-auto">
+                Kesemua soalan telah berjaya disempurnakan!
+            </p>
+            <div id="victory-options" class="flex flex-col sm:flex-row gap-3 justify-center pt-2"></div>
+        </div>
+
+        <!-- GAME OVER SCREEN -->
+        <div id="screen-gameover" class="w-full cartoon-card p-6 rounded-2xl text-center hidden screen-fade space-y-4 border-rose-500">
+            <div class="text-6xl cartoon-float">💥🛸⚠️</div>
+            <h2 id="gameover-title" class="text-xl md:text-2xl font-extrabold text-rose-600 cyber-title">MISI DISEKAT</h2>
+            <p id="gameover-reason" class="text-slate-800 font-semibold text-sm">Nyawa habis.</p>
+            <button id="gameover-retry-btn" onclick="retryCurrentMission()" class="bg-rose-500 hover:bg-rose-400 text-white font-extrabold px-6 py-3 rounded-xl text-sm transition-all transform hover:scale-105 border-b-4 border-rose-800">
+                Ulang Semula Misi Ini 🔄
+            </button>
+        </div>
+
+    </main>
+
+    <!-- MODAL ENTER AGENT NAME -->
+    <div id="name-entry-modal" class="fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-gradient-to-b from-sky-50 to-white border-4 border-sky-500 rounded-2xl max-w-md w-full p-6 shadow-2xl relative text-center border-b-8 border-b-sky-700 transform transition-all scale-105">
+            <div class="text-5xl mb-2 cartoon-float">🕵️‍♂️</div>
+            <h3 class="text-2xl font-black text-sky-900 cyber-title">IDENTITI EJEN</h3>
+            <p id="name-modal-set-text" class="text-xs text-sky-700 font-extrabold uppercase mt-1 mb-4">
+                Sila daftarkan nama anda untuk Set Misi
+            </p>
+            
+            <div class="bg-sky-100/70 border-2 border-sky-300 p-3 rounded-xl mb-4">
+                <label for="student-name-input" class="block text-sky-900 font-extrabold text-xs mb-1 uppercase tracking-wider text-left">
+                    Taip Nama Anda:
+                </label>
+                <input type="text" id="student-name-input" placeholder="Contoh: Ali / Siti" class="w-full text-center px-4 py-2 text-lg font-bold rounded-lg border-2 border-sky-400 focus:outline-none focus:border-amber-500 uppercase bg-white">
+            </div>
+
+            <div class="flex gap-2">
+                <button onclick="cancelNamePrompt()" class="w-1/3 bg-slate-300 hover:bg-slate-200 text-slate-800 font-extrabold py-3 rounded-xl border-b-4 border-slate-400 text-sm">
+                    BATAL
+                </button>
+                <button onclick="confirmAndStartMission()" class="w-2/3 bg-emerald-500 hover:bg-emerald-400 text-white font-extrabold py-3 rounded-xl border-b-4 border-emerald-700 text-sm shadow-md transition transform hover:scale-105">
+                    MULA MISI 🚀
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PRAISE CARD -->
+    <div id="praise-card-modal" class="fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-gradient-to-b from-sky-50 to-white border-4 border-amber-400 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative text-center border-b-8 border-b-amber-500 transform transition-all scale-105">
+            <div class="absolute -top-12 left-1/2 transform -translate-x-1/2 bg-amber-400 border-4 border-white text-4xl p-3 rounded-full shadow-lg cartoon-float">
+                🤖
+            </div>
+            <div class="pt-6">
+                <span class="bg-amber-100 text-amber-800 font-extrabold px-3 py-1 rounded-full text-xs uppercase tracking-widest border border-amber-300">
+                    🌟 Tutor AI Bot: Praise Card
+                </span>
+                <h3 class="text-2xl font-black text-sky-900 mt-2 mb-3 cyber-title">
+                    MAKLUM BALAS PUJIAN AI
+                </h3>
+                
+                <div class="bg-sky-100/70 border-2 border-sky-300 p-4 rounded-xl text-sky-950 text-base font-semibold leading-relaxed my-4 text-left relative">
+                    <p id="praise-card-text">
+                        "Tahniah, Ejen <span id="praise-agent-name" class="font-extrabold text-amber-600 underline"></span>! Anda telah berjaya menguasai teknik Caesar Cipher dengan anjakan berperingkat (n=1 hingga n=5) sepenuhnya! Anda kini bersedia untuk cabaran siber seterusnya!"
+                    </p>
+                </div>
+
+                <div class="text-xs text-slate-500 font-bold mb-4">
+                    ✨ Kelebihan: Memberikan sentuhan personal dan impak emosi yang positif selepas menyelesaikan Misi KBAT!
+                </div>
+
+                <button onclick="closePraiseCardModal()" class="w-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold py-3 px-6 rounded-xl border-b-4 border-amber-600 shadow-md transition transform hover:scale-105">
+                    TERUSKAN KEPUTUSAN 🚀
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- WIDGET TUTOR AI PERTANDINGAN -->
+    <div class="fixed bottom-4 right-4 z-50">
+        <button onclick="toggleAI()" class="bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold p-3 rounded-full shadow-lg flex items-center justify-center transition-all transform hover:scale-110 border-2 border-slate-950 relative">
+            <span id="ai-avatar-icon" class="text-xl mr-1.5 animate-bounce">🤖</span> 
+            <span class="text-xs font-black">AI Tutor</span>
+            <span id="ai-status-dot" class="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full"></span>
+        </button>
+
+        <div id="ai-chatbox" class="w-80 h-96 bg-white border-4 border-amber-400 rounded-2xl shadow-2xl flex flex-col hidden absolute bottom-16 right-0 overflow-hidden">
+            <div class="bg-sky-600 text-white p-2.5 border-b-2 border-amber-400 flex justify-between items-center text-xs">
+                <div class="flex items-center gap-1.5 font-bold">
+                    <span id="ai-header-emoji" class="text-base">🤖</span> 
+                    <span id="ai-header-title">CIPHERBOT AI v2.6</span>
+                </div>
+                <button onclick="toggleAI()" class="text-white hover:text-amber-200"><i class="fa-solid fa-xmark text-sm"></i></button>
+            </div>
+            
+            <div id="ai-messages" class="flex-grow p-3 overflow-y-auto space-y-2 text-xs bg-slate-50"></div>
+            
+            <div class="p-2 bg-white border-t border-slate-200 flex gap-1">
+                <button onclick="askAITutor()" class="flex-grow bg-sky-600 hover:bg-sky-500 text-white py-2 rounded-xl text-xs font-extrabold transition shadow-sm flex items-center justify-center gap-1">
+                    💡 Petunjuk AI
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ==================== SENARAI SOALAN DENGAN ANJAKAN PROGRESIF (n=1 HINGGA n=5) ==================== */
+        const gameDataSets = {
+            1: {
+                1: {
+                    name: "MISI 1: LATIHAN ISYARAT PROGRESIF (SET 1) 🟢",
+                    questions: [
+                        // Q1: Encrypt n=1
+                        { format: 'obj', type: 'encrypt', plain: 'KOD', n: 1, ans: 'LPE', choices: ['LPE', 'JQCF', 'NRG'], textType: 'Kata Laluan Ujian', aiHint: "Anjakkan setiap huruf KOD ke hadapan sebanyak +1 langkah (K->L, O->P, D->E)." },
+                        // Q2: Decrypt n=2. Pilihan BERMAKNA: BUMI, ALAM, KOTA
+                        { format: 'obj', type: 'decrypt', cipher: 'DWOK', n: 2, ans: 'BUMI', choices: ['BUMI', 'ALAM', 'KOTA'], textType: 'Isyarat Planet', aiHint: "Undurkan setiap huruf DWOK ke belakang sebanyak -2 langkah (D->B, W->U, O->M, K->I)." },
+                        // Q3: Encrypt n=3
+                        { format: 'obj', type: 'encrypt', plain: 'DATA', n: 3, ans: 'GDWD', choices: ['GDWD', 'IFYF', 'EBSB'], textType: 'Identiti Pelajar', aiHint: "Anjakkan setiap huruf DATA sebanyak +3 langkah ke hadapan (D->G, A->D, T->W, A->D)." },
+                        // Q4: Decrypt n=4. Pilihan BERMAKNA: KANCIL, MUSANG, PAUTAN
+                        { format: 'obj', type: 'decrypt', cipher: 'OERGMP', n: 4, ans: 'KANCIL', choices: ['KANCIL', 'MUSANG', 'PAUTAN'], textType: 'Mesej Kenderaan', aiHint: "Undurkan setiap huruf OERGMP sebanyak -4 langkah (O->K, E->A, R->N, G->C, M->I, P->L)." },
+                        // Q5: Encrypt n=5
+                        { format: 'obj', type: 'encrypt', plain: 'FAHAM', n: 5, ans: 'KFMFR', choices: ['GBIBN', 'KFMFR', 'HCJCO'], textType: 'Pengesahan Kefahaman', aiHint: "Anjakkan setiap huruf FAHAM sebanyak +5 langkah (F->K, A->F, H->M, A->F, M->R)." }
+                    ]
+                },
+                2: {
+                    name: "MISI 2: PINTASAN TEKS PENUH (SET 1) 🟡",
+                    questions: [
+                        // Q1: Encrypt n=1
+                        { format: 'sub', type: 'encrypt', plain: 'BATA', n: 1, ans: 'CBUB', textType: 'Log Unsur Binaan', aiHint: "Anjakkan setiap huruf BATA ke hadapan sebanyak +1 langkah (B->C, A->B, T->U, A->B)." },
+                        // Q2: Decrypt n=2
+                        { format: 'sub', type: 'decrypt', cipher: 'FCVC', n: 2, ans: 'DATA', textType: 'Sistem Fail Utama', aiHint: "Undurkan setiap huruf FCVC ke belakang sebanyak -2 langkah (F->D, C->A, V->T, C->A)." },
+                        // Q3: Decrypt n=3
+                        { format: 'sub', type: 'decrypt', cipher: 'PDVD', n: 3, ans: 'MASA', textType: 'Laporan Masa Siber', aiHint: "Undurkan setiap huruf PDVD sebanyak -3 langkah (P->M, D->A, V->S, D->A)." },
+                        // Q4: Decrypt n=4
+                        { format: 'sub', type: 'decrypt', cipher: 'TVSKVEI', n: 4, ans: 'PROGRAM', textType: 'Aplikasi Komputer', aiHint: "Undurkan setiap huruf TVSKVEI sebanyak -4 langkah (T->P, V->R, S->O, K->G, V->R, E->A, I->M)." },
+                        // Q5: Encrypt n=5
+                        { format: 'sub', type: 'encrypt', plain: 'RASA', n: 5, ans: 'WFXF', textType: 'Isyarat Deria', aiHint: "Anjakkan setiap huruf RASA ke hadapan sebanyak +5 langkah (R->W, A->F, S->X, A->F)." }
+                    ]
+                },
+                3: {
+                    name: "MISI 3: CABARAN PAKAR KRIPTOGRAFI (SET 1) 🔥 [KBAT]",
+                    questions: [
+                        // Q1: Encrypt (Cari n = 1)
+                        { format: 'obj', type: 'encrypt', plain: 'SAYA', ans: '1', choices: ['1', '3', '5'], textType: '1. Jejak Nilai Anjakan (n)', isFindN: true, cipherTextForN: 'TBZB', aiHint: "Bandingkan huruf 'S' bertukar ke 'T'. Nilai anjakannya ialah 1 langkah!" },
+                        // Q2: Encrypt (Sulit Ayat Penuh) n=2
+                        { format: 'sub', type: 'encrypt', plain: 'MALAYSIAKU BERJAYA', n: 2, ans: 'OCNCAUKCMW DGTLCAC', textType: '2. Penyulitan Ayat Penuh', aiHint: "Anjak setiap huruf sebanyak +2 langkah ke depan. Kekalkan ruang kosong!" },
+                        // Q3: Decrypt (Nyah Sulit Ayat Penuh) n=3
+                        { format: 'sub', type: 'decrypt', cipher: 'NVVP VDLQV', n: 3, ans: 'KSSM SAINS', textType: '3. Nyahsulit Ayat Penuh', aiHint: "Undurkan setiap huruf sebanyak -3 langkah. Kekalkan jarak kosong!" },
+                        // Q4: Decrypt (Cari n = 4 - Nyahsulit)
+                        { format: 'obj', type: 'decrypt', cipher: 'FSPE', ans: '4', choices: ['2', '4', '5'], textType: '4. Jejak Anjakan Nyahsulit (n)', isFindN: true, plainTextForN: 'BOLA', aiHint: "Bandingkan F yang diundurkan menjadi B (E, D, C, B). Nilainya ialah 4!" },
+                        // Q5: Encrypt (Sulit Ayat Penuh) n=5
+                        { format: 'sub', type: 'encrypt', plain: 'SAYA SUKA KOD', n: 5, ans: 'XFDF XZPBF PTI', textType: '5. Penyulitan Ayat Penuh', aiHint: "Anjakkan setiap huruf sebanyak +5 langkah ke depan. Kekalkan jarak kosong!" }
+                    ]
+                }
+            },
+            2: {
+                1: {
+                    name: "MISI 1: LATIHAN ISYARAT PROGRESIF (SET 2) 🟢",
+                    questions: [
+                        // Q1: Encrypt n=1
+                        { format: 'obj', type: 'encrypt', plain: 'BEG', n: 1, ans: 'CFH', choices: ['CFH', 'EHJ', 'GJL'], textType: 'Beg Data Ujian', aiHint: "Anjakkan huruf BEG sebanyak +1 langkah (B->C, E->F, G->H)." },
+                        // Q2: Decrypt n=2. Pilihan BERMAKNA: LIMA, DESA, BOLA
+                        { format: 'obj', type: 'decrypt', cipher: 'NKOC', n: 2, ans: 'LIMA', choices: ['LIMA', 'DESA', 'BOLA'], textType: 'Kod Angka Rahsia', aiHint: "Undurkan setiap huruf NKOC sebanyak -2 langkah (N->L, K->I, O->M, C->A)." },
+                        // Q3: Encrypt n=3
+                        { format: 'obj', type: 'encrypt', plain: 'AIR', n: 3, ans: 'DLU', choices: ['DLU', 'FNW', 'CKT'], textType: 'Elemen Alam', aiHint: "Anjakkan huruf AIR sebanyak +3 langkah (A->D, I->L, R->U)." },
+                        // Q4: Decrypt n=4. Pilihan BERMAKNA: KAPAL, PUSAT, SKRIN
+                        { format: 'obj', type: 'decrypt', cipher: 'OETEP', n: 4, ans: 'KAPAL', choices: ['KAPAL', 'PUSAT', 'SKRIN'], textType: 'Mod Pengangkutan', aiHint: "Undurkan huruf OETEP sebanyak -4 langkah (O->K, E->A, T->P, E->A, P->L)." },
+                        // Q5: Encrypt n=5
+                        { format: 'obj', type: 'encrypt', plain: 'SAINS', n: 5, ans: 'XFNXX', choices: ['UCKPI', 'XFNXX', 'VDLQJ'], textType: 'Subjek Utama', aiHint: "Anjakkan huruf SAINS sebanyak +5 langkah (S->X, A->F, I->N, N->S, S->X)." }
+                    ]
+                },
+                2: {
+                    name: "MISI 2: PINTASAN TEKS PENUH (SET 2) 🟡",
+                    questions: [
+                        // Q1: Decrypt n=1
+                        { format: 'sub', type: 'decrypt', cipher: 'LPUB', n: 1, ans: 'KOTA', textType: 'Mesej Lokasi Siber', aiHint: "Undurkan setiap huruf LPUB ke belakang sebanyak -1 langkah (L->K, P->O, U->T, B->A)." },
+                        // Q2: Encrypt n=2
+                        { format: 'sub', type: 'encrypt', plain: 'GURU', n: 2, ans: 'IWTW', textType: 'Fail Identiti Pendidik', aiHint: "Anjakkan setiap huruf GURU ke hadapan sebanyak +2 langkah (G->I, U->W, R->T, U->W)." },
+                        // Q3: Encrypt n=3
+                        { format: 'sub', type: 'encrypt', plain: 'MEJA', n: 3, ans: 'PHMD', textType: 'Kelengkapan Makmal', aiHint: "Anjakkan setiap huruf MEJA sebanyak +3 langkah (M->P, E->H, J->M, A->D)." },
+                        // Q4: Decrypt n=4
+                        { format: 'sub', type: 'decrypt', cipher: 'XMGFEL', n: 4, ans: 'TICBAH', textType: 'Laporan Sifat', aiHint: "Undurkan setiap huruf XMGFEL sebanyak -4 langkah (X->T, M->I, G->C, F->B, E->A, L->H)." },
+                        // Q5: Decrypt n=5
+                        { format: 'sub', type: 'decrypt', cipher: 'GTQF', n: 5, ans: 'BOLA', textType: 'Peralatan Sukan', aiHint: "Undurkan setiap huruf GTQF sebanyak -5 langkah (G->B, T->O, Q->L, F->A)." }
+                    ]
+                },
+                3: {
+                    name: "MISI 3: CABARAN PAKAR KRIPTOGRAFI (SET 2) 🔥 [KBAT]",
+                    questions: [
+                        // Q1: Encrypt (Cari n = 1)
+                        { format: 'obj', type: 'encrypt', plain: 'BUKU', ans: '1', choices: ['1', '3', '5'], textType: '1. Jejak Nilai Anjakan (n)', isFindN: true, cipherTextForN: 'CVLV', aiHint: "Bandingkan huruf 'B' bertukar ke 'C'. Nilainya ialah 1!" },
+                        // Q2: Encrypt (Sulit Ayat Penuh) n=2
+                        { format: 'sub', type: 'encrypt', plain: 'KSSM SAINS KOMPUTER', n: 2, ans: 'MUUO UCKPU MQORWVGT', textType: '2. Penyulitan Ayat Penuh', aiHint: "Anjak setiap huruf sebanyak +2 langkah. Kekalkan jarak kosong!" },
+                        // Q3: Decrypt (Nyah Sulit Ayat Penuh) n=3
+                        { format: 'sub', type: 'decrypt', cipher: 'IWRZD ODQC', n: 3, ans: 'FTPWA LANZ', textType: '3. Nyahsulit Ayat Penuh', aiHint: "Undurkan setiap huruf sebanyak -3 langkah. Kekalkan jarak kosong!" },
+                        // Q4: Decrypt (Cari n = 4 - Nyahsulit)
+                        { format: 'obj', type: 'decrypt', cipher: 'GMRXE', ans: '4', choices: ['2', '4', '5'], textType: '4. Jejak Anjakan Nyahsulit (n)', isFindN: true, plainTextForN: 'CINTA', aiHint: "Bandingkan G yang diundurkan menjadi C (4 langkah ke belakang). Nilainya ialah 4!" },
+                        // Q5: Encrypt (Sulit Ayat Penuh) n=5
+                        { format: 'sub', type: 'encrypt', plain: 'AKU BOLEH BUAT', n: 5, ans: 'FPZ GTQJM GZFY', textType: '5. Penyulitan Ayat Penuh', aiHint: "Anjakkan setiap huruf sebanyak +5 langkah ke depan. Kekalkan ruang kosong!" }
+                    ]
+                }
+            }
+        };
+
+        const originalAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+        let currentSetNum = 1;
+        let selectedSetPending = 1;
+        let currentMissionNum = 1;
+        let currentQuestionIdx = 0; 
+        let activeQuestion = null;
+        let missionLives = 2; 
+        let isMuted = false;
+        let playerName = "Ejen Rahsia"; 
+
+        const englishPraisePhrases = [
+            "Well done!",
+            "Good job!",
+            "Congratulations!",
+            "Great job!",
+            "Excellent work!",
+            "Fantastic effort!"
+        ];
+
+        /* ==================== KAWALAN AUDIO & TEPUKAN ==================== */
+        function controlAudio(action) {
+            const music = document.getElementById('bg-music');
+            const btnMute = document.getElementById('btn-mute');
+            
+            if (action === 'play') {
+                music.muted = isMuted;
+                let playPromise = music.play();
+                if (playPromise !== undefined) {
+                    playPromise.then(_ => {}).catch(error => { console.log("Autoplay dihalang pelayar."); });
+                }
+            } else if (action === 'pause') {
+                music.pause();
+            } else if (action === 'mute') {
+                isMuted = !isMuted;
+                music.muted = isMuted;
+                btnMute.className = isMuted 
+                    ? "w-8 h-8 rounded-full bg-slate-400 text-white flex items-center justify-center text-xs" 
+                    : "w-8 h-8 rounded-full bg-rose-600 text-white flex items-center justify-center text-xs";
+            }
+        }
+
+        document.addEventListener('click', function initAudioOnInteraction() {
+            controlAudio('play');
+            document.removeEventListener('click', initAudioOnInteraction);
+        }, { once: true });
+
+        function playClappingSound() {
+            if (isMuted) return;
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                const ctx = new AudioContext();
+
+                const totalClaps = 28;
+                for (let i = 0; i < totalClaps; i++) {
+                    const delay = Math.random() * 1.5; 
+                    const clapBuffer = ctx.createBuffer(1, ctx.sampleRate * 0.1, ctx.sampleRate);
+                    const output = clapBuffer.getChannelData(0);
+                    
+                    for (let j = 0; j < clapBuffer.length; j++) {
+                        output[j] = (Math.random() * 2 - 1) * Math.exp(-j / (ctx.sampleRate * 0.015));
+                    }
+
+                    const whiteNoise = ctx.createBufferSource();
+                    whiteNoise.buffer = clapBuffer;
+
+                    const filter = ctx.createBiquadFilter();
+                    filter.type = 'bandpass';
+                    filter.frequency.value = 1000 + Math.random() * 1200;
+                    filter.Q.value = 1.2;
+
+                    const gainNode = ctx.createGain();
+                    gainNode.gain.setValueAtTime(0.3 + Math.random() * 0.4, ctx.currentTime + delay);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.08);
+
+                    whiteNoise.connect(filter);
+                    filter.connect(gainNode);
+                    gainNode.connect(ctx.destination);
+
+                    whiteNoise.start(ctx.currentTime + delay);
+                }
+            } catch (e) {
+                console.log("Audio Context error:", e);
+            }
+        }
+
+        function speakEnglishPraise(customText = null) {
+            if ('speechSynthesis' in window && !isMuted) {
+                window.speechSynthesis.cancel();
+                const textToSpeak = customText || englishPraisePhrases[Math.floor(Math.random() * englishPraisePhrases.length)];
+                let utterance = new SpeechSynthesisUtterance(textToSpeak);
+                utterance.lang = 'en-US'; 
+                utterance.rate = 1.0;
+                utterance.pitch = 1.1;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function typeWriterAIMessage(senderTitle, fullText, emotionEmoji = '🤖', isAlert = false) {
+            const messages = document.getElementById('ai-messages');
+            
+            let bubble = document.createElement('div');
+            bubble.className = isAlert 
+                ? "bg-rose-50 p-2.5 rounded-xl text-rose-950 border border-rose-300 font-semibold shadow-sm"
+                : "bg-sky-50 p-2.5 rounded-xl text-sky-950 border border-sky-300 font-semibold shadow-sm";
+            
+            let header = document.createElement('div');
+            header.className = "flex items-center gap-1 font-bold text-[11px] mb-1 text-sky-800";
+            header.innerHTML = `<span>${emotionEmoji}</span> <span>${senderTitle}</span>`;
+            
+            let contentSpan = document.createElement('span');
+            bubble.appendChild(header);
+            bubble.appendChild(contentSpan);
+            messages.appendChild(bubble);
+
+            let charIndex = 0;
+
+            if(isAlert) {
+                document.getElementById('ai-chatbox').classList.remove('hidden');
+            }
+
+            let timer = setInterval(() => {
+                if (charIndex < fullText.length) {
+                    contentSpan.textContent += fullText.charAt(charIndex);
+                    charIndex++;
+                    messages.scrollTop = messages.scrollHeight;
+                } else {
+                    clearInterval(timer);
+                }
+            }, 25);
+        }
+
+        /* ==================== LOGIK UTAMA ==================== */
+
+        function triggerCelebrationConfetti() {
+            var duration = 2 * 1000;
+            var end = Date.now() + duration;
+            (function frame() {
+                confetti({ particleCount: 5, angle: 60, spread: 60, origin: { x: 0 } });
+                confetti({ particleCount: 5, angle: 120, spread: 60, origin: { x: 1 } });
+                if (Date.now() < end) { requestAnimationFrame(frame); }
+            }());
+        }
+
+        function hideAllScreens() {
+            document.getElementById('screen-intro').classList.add('hidden');
+            document.getElementById('screen-gameplay').classList.add('hidden');
+            document.getElementById('screen-mission-success').classList.add('hidden');
+            document.getElementById('screen-victory').classList.add('hidden');
+            document.getElementById('screen-gameover').classList.add('hidden');
+            document.getElementById('praise-card-modal').classList.add('hidden');
+            document.getElementById('name-entry-modal').classList.add('hidden');
+        }
+
+        function goHome() {
+            if (!document.getElementById('screen-intro').classList.contains('hidden')) return;
+            if (confirm("Mahu kembali ke Halaman Utama?")) restartGameComplete();
+        }
+
+        function promptForAgentName(setNum) {
+            selectedSetPending = setNum;
+            document.getElementById('name-modal-set-text').textContent = `SILA DAFTARKAN NAMA ANDA UNTUK MISI SET ${setNum}`;
+            document.getElementById('student-name-input').value = "";
+            document.getElementById('name-entry-modal').classList.remove('hidden');
+            setTimeout(() => { document.getElementById('student-name-input').focus(); }, 100);
+        }
+
+        function cancelNamePrompt() {
+            document.getElementById('name-entry-modal').classList.add('hidden');
+        }
+
+        function confirmAndStartMission() {
+            let inputName = document.getElementById('student-name-input').value.trim();
+            playerName = inputName !== "" ? inputName : "Rahsia";
+
+            document.getElementById('name-entry-modal').classList.add('hidden');
+            startMissionMode(selectedSetPending);
+        }
+
+        function startMissionMode(setNum) {
+            controlAudio('play');
+            currentSetNum = setNum;
+            currentMissionNum = 1;
+            currentQuestionIdx = 0;
+            missionLives = 2; 
+            document.getElementById('game-set-indicator').textContent = `🎮 Misi Pemburu Teks Sulit Maya (SET ${currentSetNum}) - Ejen ${playerName}`;
+            loadQuestion();
+        }
+
+        function updateLivesUI() {
+            const h1 = document.getElementById('heart-1');
+            const h2 = document.getElementById('heart-2');
+            if (missionLives === 2) {
+                h1.className = "fa-solid fa-heart text-rose-500 scale-110";
+                h2.className = "fa-solid fa-heart text-rose-500 scale-110";
+            } else if (missionLives === 1) {
+                h1.className = "fa-solid fa-heart text-rose-500 scale-110";
+                h2.className = "fa-regular fa-heart text-slate-300 scale-90 opacity-60"; 
+            } else {
+                h1.className = "fa-regular fa-heart text-slate-300 scale-90 opacity-60";
+                h2.className = "fa-regular fa-heart text-slate-300 scale-90 opacity-60";
+            }
+        }
+
+        function generateDynamicTable(type, n) {
+            const tableBody = document.getElementById('dynamic-alphabet-table');
+            tableBody.innerHTML = ""; 
+
+            let shiftedAlphabet = [];
+            for (let i = 0; i < 26; i++) {
+                let targetIndex = type === 'encrypt' ? (i + n) % 26 : (i - n + 26) % 26;
+                shiftedAlphabet.push(originalAlphabet[targetIndex]);
+            }
+
+            let row1Title = type === 'encrypt' ? 'Teks Asal' : 'Teks Sulit';
+            let row2Title = type === 'encrypt' ? `Teks Sulit (+${n})` : `Teks Asal (-${n})`;
+
+            let tr1 = document.createElement('tr');
+            tr1.className = "text-sky-800 font-bold text-sm";
+            let th1 = document.createElement('td');
+            th1.className = "px-3 py-1 border border-emerald-100 bg-emerald-50 font-extrabold text-left text-emerald-900 sticky left-0 z-10 min-w-[120px]";
+            th1.textContent = row1Title;
+            tr1.appendChild(th1);
+
+            originalAlphabet.forEach(char => {
+                let td = document.createElement('td');
+                td.className = "px-2 py-1 border border-emerald-100 bg-white min-w-[28px]";
+                td.textContent = char;
+                tr1.appendChild(td);
+            });
+
+            let tr2 = document.createElement('tr');
+            tr2.className = "text-pink-700 font-bold text-sm";
+            let th2 = document.createElement('td');
+            th2.className = "px-3 py-1 border border-emerald-100 bg-emerald-50 font-extrabold text-left text-emerald-900 sticky left-0 z-10 min-w-[120px]";
+            th2.textContent = row2Title;
+            tr2.appendChild(th2);
+
+            shiftedAlphabet.forEach(char => {
+                let td = document.createElement('td');
+                td.className = "px-2 py-1 border border-emerald-100 bg-emerald-50/50 min-w-[28px] text-amber-700 font-extrabold";
+                td.textContent = char;
+                tr2.appendChild(td);
+            });
+
+            tableBody.appendChild(tr1);
+            tableBody.appendChild(tr2);
+        }
+
+        function loadQuestion() {
+            hideAllScreens();
+            document.getElementById('screen-gameplay').classList.remove('hidden');
+            updateLivesUI();
+            document.getElementById('subjective-input').value = "";
+
+            const missionData = gameDataSets[currentSetNum][currentMissionNum];
+            activeQuestion = missionData.questions[currentQuestionIdx];
+
+            document.getElementById('mission-badge').textContent = `MISI ${currentMissionNum}`;
+            document.getElementById('question-progress').textContent = `SOALAN ${currentQuestionIdx + 1} / ${missionData.questions.length}`;
+
+            const inst = document.getElementById('question-instruction');
+            const qTxt1 = document.getElementById('q-main-text');
+            const qTxt2 = document.getElementById('q-sub-text');
+            const tipsExpl = document.getElementById('tips-explanation');
+            const tableContainer = document.getElementById('alphabet-table-container');
+
+            if (currentMissionNum === 1) {
+                tableContainer.classList.remove('hidden');
+                generateDynamicTable(activeQuestion.type, activeQuestion.n || 0);
+            } else {
+                tableContainer.classList.add('hidden');
+            }
+
+            if (activeQuestion.isFindN) {
+                inst.innerHTML = `🕵️‍♂️ Analisis Songsang: <span class='text-sky-700 ml-1'>${activeQuestion.textType}</span>`;
+                if(activeQuestion.type === 'encrypt') {
+                    qTxt1.innerHTML = `📝 Teks Asal: <span class="bg-sky-100 px-2 py-0.5 rounded text-sky-900 font-extrabold tracking-widest border border-sky-200">${activeQuestion.plain}</span> ➡️ Teks Sulit: <span class="bg-pink-100 px-2 py-0.5 rounded text-pink-800 font-extrabold tracking-widest border border-pink-200">${activeQuestion.cipherTextForN}</span>`;
+                } else {
+                    qTxt1.innerHTML = `🧩 Teks Sulit: <span class="bg-pink-100 px-2 py-0.5 rounded text-pink-800 font-extrabold tracking-widest border border-pink-200">${activeQuestion.cipher}</span> ➡️ Teks Asal: <span class="bg-sky-100 px-2 py-0.5 rounded text-sky-900 font-extrabold tracking-widest border border-sky-200">${activeQuestion.plainTextForN}</span>`;
+                }
+                qTxt2.innerHTML = `⚙️ Cabaran: <span class="text-sky-900 font-extrabold">Berapakah nilai anjakan (n) yang digunakan?</span>`;
+                tipsExpl.innerHTML = `<div class="bg-emerald-50 p-2 rounded-lg border-2 border-emerald-200 col-span-2"><strong class="text-emerald-800">🔍 MOD REVERSE ENGINEERING:</strong> Cari jarak perbezaan huruf asal dengan huruf sulit.</div>`;
+            } else {
+                if(activeQuestion.type === 'encrypt') {
+                    inst.innerHTML = `🔒 Sulitkan Data: <span class='text-sky-700 ml-1'>${activeQuestion.textType}</span>`;
+                    qTxt1.innerHTML = `📝 Teks Asal: <span class="bg-sky-100 px-2 py-0.5 rounded text-sky-900 font-extrabold border border-sky-200">${activeQuestion.plain}</span>`;
+                    qTxt2.innerHTML = `⚙️ Nilai Anjakan (n): <span class="text-pink-700 font-extrabold bg-pink-50 px-2 py-1 rounded border border-pink-200">${activeQuestion.n}</span>`;
+                    
+                    if (currentMissionNum === 3) {
+                        tipsExpl.innerHTML = `<div class="bg-emerald-50 p-2 rounded-lg border-2 border-emerald-200 col-span-2"><strong class="text-emerald-800">🔥 OPERASI AYAT PENUH:</strong> Tukar huruf mengikut anjakan +${activeQuestion.n}. <span class="text-amber-700 font-bold">Kekalkan ruang kosong!</span></div>`;
+                    } else {
+                        tipsExpl.innerHTML = `<div class="bg-emerald-50 p-2 rounded-lg border-2 border-emerald-200 col-span-2"><strong class="text-emerald-800">🔒 MOD PENYULITAN:</strong> Tambah anjakan (+${activeQuestion.n}).</div>`;
+                    }
+                } else {
+                    inst.innerHTML = `🔑 Nyahsulitkan Data: <span class='text-sky-700 ml-1'>${activeQuestion.textType}</span>`;
+                    qTxt1.innerHTML = `🧩 Teks Sulit: <span class="bg-pink-100 px-2 py-0.5 rounded text-pink-800 font-extrabold border border-pink-200">${activeQuestion.cipher}</span>`;
+                    qTxt2.innerHTML = `⚙️ Nilai Anjakan (n): <span class="text-sky-800 font-extrabold bg-sky-50 px-2 py-1 rounded border border-sky-200">${activeQuestion.n}</span>`;
+                    tipsExpl.innerHTML = `<div class="bg-emerald-50 p-2 rounded-lg border-2 border-emerald-200 col-span-2"><strong class="text-emerald-800">🔑 MOD NYAHSULIT:</strong> Undurkan anjakan (-${activeQuestion.n}).</div>`;
+                }
+            }
+
+            const objContainer = document.getElementById('objective-container');
+            const subContainer = document.getElementById('subjective-container');
+
+            if(activeQuestion.format === 'obj') {
+                objContainer.classList.remove('hidden');
+                subContainer.classList.add('hidden');
+                objContainer.innerHTML = "";
+                const labels = ['A', 'B', 'C'];
+                activeQuestion.choices.forEach((choice, index) => {
+                    let btn = document.createElement('button');
+                    btn.className = "bg-white hover:bg-sky-50 p-3.5 rounded-xl text-left border-2 border-slate-300 hover:border-sky-500 text-slate-900 transition w-full font-extrabold shadow-sm text-base md:text-lg question-text flex items-center";
+                    btn.innerHTML = `<span class="text-sky-700 mr-3 text-lg font-black">${labels[index]}.</span> ${choice}`;
+                    btn.onclick = () => verifyAnswer(choice);
+                    objContainer.appendChild(btn);
+                });
+            } else {
+                objContainer.classList.add('hidden');
+                subContainer.classList.remove('hidden');
+                setTimeout(() => { document.getElementById('subjective-input').focus(); }, 100);
+            }
+            
+            document.getElementById('ai-messages').innerHTML = "";
+            typeWriterAIMessage("CIPHERBOT AI", `Sedia Ejen ${playerName} untuk Misi ${currentMissionNum} (Soalan ${currentQuestionIdx + 1}, Anjakan n=${activeQuestion.n || activeQuestion.ans})?`, "🤖");
+        }
+
+        function verifyAnswer(playerAnswer) {
+            let formattedAnswer = playerAnswer.replace(/\s+/g, ' ').trim().toUpperCase();
+            let correctAnswer = activeQuestion.ans.toUpperCase();
+            const totalQuestions = gameDataSets[currentSetNum][currentMissionNum].questions.length;
+
+            if(formattedAnswer === correctAnswer) {
+                typeWriterAIMessage("CIPHERBOT AI", `Syabas Ejen ${playerName}! Analisis jawapan anda tepat!`, "🌟");
+                speakEnglishPraise();
+
+                if(currentQuestionIdx === (totalQuestions - 1)) {
+                    if (currentMissionNum === 3) {
+                        showPraiseCardModal();
+                    } else {
+                        showMissionSuccessScreen();
+                    }
+                } else {
+                    currentQuestionIdx++;
+                    setTimeout(() => { loadQuestion(); }, 1200);
+                }
+            } else {
+                missionLives--;
+                updateLivesUI();
+                
+                if (missionLives > 0) {
+                    let hintAlert = activeQuestion.aiHint || "Awas, jawapan anda tidak sepadan! Semak semula julat anjakan abjad.";
+                    typeWriterAIMessage("AMARAN AI", `Akses Ditolak! ${hintAlert}`, "⚠️", true);
+                    
+                    if(activeQuestion.format === 'sub') {
+                        document.getElementById('subjective-input').value = "";
+                        document.getElementById('subjective-input').focus();
+                    }
+                } else {
+                    triggerGameOver(`💥 Nyawa habis bagi Misi ${currentMissionNum}.`);
+                }
+            }
+        }
+
+        function submitSubjectiveAnswer() {
+            let inputVal = document.getElementById('subjective-input').value;
+            if(!inputVal.trim()) return alert("Sila taip jawapan terlebih dahulu!");
+            verifyAnswer(inputVal);
+        }
+
+        function showPraiseCardModal() {
+            document.getElementById('praise-agent-name').textContent = playerName;
+            document.getElementById('praise-card-modal').classList.remove('hidden');
+            triggerCelebrationConfetti();
+            playClappingSound();
+            speakEnglishPraise("Excellent work! Mission accomplished!");
+        }
+
+        function closePraiseCardModal() {
+            document.getElementById('praise-card-modal').classList.add('hidden');
+            showMissionSuccessScreen();
+        }
+
+        function showMissionSuccessScreen() {
+            hideAllScreens();
+            triggerCelebrationConfetti();
+            playClappingSound();
+            speakEnglishPraise("Well done! Excellent job!");
+
+            const successScreen = document.getElementById('screen-mission-success');
+            document.getElementById('ms-title').textContent = `🎉 MISI ${currentMissionNum} SELESAI! 🎉`;
+            document.getElementById('ms-desc').innerHTML = `Tahniah Ejen <strong>${playerName}</strong>! Misi ${currentMissionNum} berjaya disempurnakan.`;
+            
+            if(currentMissionNum === 3) document.getElementById('ms-btn').textContent = "BUKA KEPUTUSAN AKHIR 🏆";
+            else document.getElementById('ms-btn').textContent = `TERUSKAN KE MISI ${currentMissionNum + 1} 🚀`;
+            successScreen.classList.remove('hidden');
+        }
+
+        function goToNextMission() {
+            if(currentMissionNum === 3) {
+                showVictoryScreen();
+            } else {
+                currentMissionNum++;
+                currentQuestionIdx = 0;
+                missionLives = 2; 
+                loadQuestion();
+            }
+        }
+
+        function showVictoryScreen() {
+            hideAllScreens();
+            triggerCelebrationConfetti();
+            playClappingSound();
+            speakEnglishPraise("Congratulations! You are a master!");
+
+            document.getElementById('screen-victory').classList.remove('hidden');
+            
+            const title = document.getElementById('victory-title');
+            const desc = document.getElementById('victory-desc');
+            const optionsContainer = document.getElementById('victory-options');
+            optionsContainer.innerHTML = "";
+
+            if(currentSetNum === 1) {
+                title.textContent = `UJIAN SET 1 SELESAI, EJEN ${playerName.toUpperCase()}! 👑`;
+                desc.textContent = "Tahniah! Anda telah berjaya menguasai kesemua Misi dalam Set 1.";
+                
+                let btnNextSet = document.createElement('button');
+                btnNextSet.className = "bg-sky-600 hover:bg-sky-500 text-white font-extrabold px-6 py-3 rounded-xl text-sm transition border-b-4 border-sky-800 shadow";
+                btnNextSet.textContent = "UJIAN SET 2 🛸";
+                btnNextSet.onclick = () => promptForAgentName(2);
+
+                optionsContainer.appendChild(btnNextSet);
+            } else {
+                title.textContent = `MASTER KRIPTOGRAFI: EJEN ${playerName.toUpperCase()}! 🏆`;
+                desc.textContent = "Luar biasa! Kesemua Misi bagi Set 1 dan Set 2 telah diselesaikan dengan cemerlang!";
+
+                let btnResetAll = document.createElement('button');
+                btnResetAll.className = "bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold px-6 py-3 rounded-xl text-sm transition border-b-4 border-amber-700";
+                btnResetAll.textContent = "Kembali ke Menu Utama 🔄";
+                btnResetAll.onclick = restartGameComplete;
+                
+                optionsContainer.appendChild(btnResetAll);
+            }
+        }
+
+        function triggerGameOver(reason) {
+            hideAllScreens();
+            document.getElementById('gameover-reason').textContent = reason;
+            document.getElementById('screen-gameover').classList.remove('hidden');
+            typeWriterAIMessage("KECEMASAN AI", `Sistem disekat! Nyawa Ejen ${playerName} telah habis.`, "💥", true);
+        }
+
+        function retryCurrentMission() {
+            currentQuestionIdx = 0; 
+            missionLives = 2; 
+            loadQuestion();
+        }
+
+        function restartGameComplete() {
+            hideAllScreens();
+            document.getElementById('screen-intro').classList.remove('hidden');
+        }
+
+        function toggleAI() { 
+            document.getElementById('ai-chatbox').classList.toggle('hidden'); 
+        }
+
+        function askAITutor() {
+            let hint = activeQuestion.aiHint || (activeQuestion.type === 'encrypt' 
+                ? `Petunjuk: Tambahkan kedudukan abjad sebanyak +${activeQuestion.n} langkah ke depan.` 
+                : `Petunjuk: Undurkan kedudukan abjad sebanyak -${activeQuestion.n} langkah ke belakang.`);
+            
+            typeWriterAIMessage("PETUNJUK AI", hint, "💡");
+        }
+
+        document.getElementById('student-name-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') confirmAndStartMission();
+        });
+
+        document.getElementById('subjective-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') submitSubjectiveAnswer();
+        });
+    </script>
+</body>
+</html>
